@@ -19,7 +19,7 @@ export async function getMe(req:AuthRequest, res:Response, next:NextFunction) {
         }catch (error) {
             console.error("Error in getMe controller:", error);
             res.status(500);
-            next();
+            next(error);
         }
 }
 
@@ -45,7 +45,9 @@ export async function authCallback(req: AuthRequest, res: Response, next: NextFu
                 name: clerkUser.firstName
                     ? `${clerkUser.firstName} ${clerkUser.lastName || ""}`.trim()
                     : clerkUser.emailAddresses[0]?.emailAddress.split('@')[0] || " User",
-                    email: clerkUser.emailAddresses[0]?.emailAddress,
+                    email: clerkUser.emailAddresses.find(
+                        (emailAddress) => emailAddress.id === clerkUser.primaryEmailAddressId,
+                    )?.emailAddress,
                     avatar: clerkUser.imageUrl
             });
         }
@@ -56,6 +58,6 @@ export async function authCallback(req: AuthRequest, res: Response, next: NextFu
         console.error("Error in authCallback controller:", error);
 
         res.status(500);
-        next();
+        next(error);
     }
 }
