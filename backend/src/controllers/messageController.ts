@@ -2,11 +2,16 @@ import type{Response, NextFunction } from "express";
 import type { AuthRequest } from "../middleware/auth";
 import { Chat } from "../models/Chat";
 import { Message } from "../models/Message";
+import { Types } from "mongoose";
 
 export async function getMessages(req: AuthRequest, res: Response, next: NextFunction) {
     try {
         const userId = req.userId;
         const { chatId } = req.params;
+        if (typeof chatId !== "string" || !Types.ObjectId.isValid(chatId)) {
+            res.status(400).json({ message: "Invalid chat ID" });
+            return;
+        }
 const chat = await Chat.findOne({
     _id: chatId,
     participants: userId ,
