@@ -1,0 +1,5 @@
+ssh -i ~/.ssh/omnichat-key.pem ubuntu@13.235.105.153
+cd OmniChat && git pull
+docker build --build-arg VITE_CLERK_PUBLISHABLE_KEY=$(grep '^CLERK_PUBLISHABLE_KEY=' .env | cut -d= -f2-) -t omnichat .
+docker rm -f omnichat
+docker run -d --name omnichat --restart always -p 127.0.0.1:3000:3000 --env-file .env omnichat
