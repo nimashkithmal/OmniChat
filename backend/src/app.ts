@@ -17,10 +17,10 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', message: 'Server is running' });
 });
 
-app.use("api/auth",authRoutes)
-app.use("api/chat",chatRoutes)
-app.use("api/messages",messageRoutes)
-app.use("api/users",userRoutes)
+app.use("/api/auth",authRoutes)
+app.use("/api/chat",chatRoutes)
+app.use("/api/messages",messageRoutes)
+app.use("/api/users",userRoutes)
 
 app.use(errorHandler); //middleware to handle errors
 
