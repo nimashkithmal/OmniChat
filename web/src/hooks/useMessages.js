@@ -12,7 +12,8 @@ export const useMessages = (chatId) => {
       const res = await api.get(`/messages/chat/${chatId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      return res.data;
+      // backend responds with { messages: [...] }
+      return Array.isArray(res.data) ? res.data : res.data.messages ?? [];
     },
     enabled: !!chatId,
   });

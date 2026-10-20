@@ -5,6 +5,8 @@ npm-debug.log
 Readme.md
 .env
 .env.local
+**/.env
+**/.env.*
 .Ds_Store
 .expo
 mobile

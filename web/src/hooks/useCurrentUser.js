@@ -12,7 +12,8 @@ export const useCurrentUser = () => {
       const { data } = await api.get("/auth/me", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      return data;
+      // backend responds with { user: {...} }
+      return data.user ?? data;
     },
   });
 };
