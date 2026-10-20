@@ -23,7 +23,11 @@ function UserItem({ user, isOnline, onPress }: UserItemProps) {
           <Text className="text-foreground font-medium" numberOfLines={1}>
             {user.name}
           </Text>
-          {isOnline && <Text className="text-xs text-primary font-medium">Online</Text>}
+          {isOnline && (
+            <Text className="text-xs font-medium" style={{ color: "#22C55E" }}>
+              Online
+            </Text>
+          )}
         </View>
         <Text className="text-xs text-subtle-foreground mt-0.5">{user.email}</Text>
       </View>
