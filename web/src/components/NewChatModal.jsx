@@ -6,7 +6,7 @@ import { useUsers } from "../hooks/useUsers";
 export function NewChatModal({ onStartChat, isPending, isOpen, onClose }) {
   const [searchQuery, setSearchQuery] = useState("");
   const { onlineUsers } = useSocketStore();
-  const { data: allUsers = [] } = useUsers();
+  const { data: allUsers = [], isLoading } = useUsers();
   const isOnline = (id) => onlineUsers.has(id);
 
   const handleStartChat = (participantId) => {
@@ -15,9 +15,10 @@ export function NewChatModal({ onStartChat, isPending, isOpen, onClose }) {
     onClose();
   };
 
+  // show every user until a query is typed, then filter by name or email
   const searchResults = allUsers.filter((u) => {
-    if (!searchQuery.trim()) return false;
-    const query = searchQuery.toLowerCase();
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return true;
     return u.name?.toLowerCase().includes(query) || u.email?.toLowerCase().includes(query);
   });
 
@@ -42,7 +43,11 @@ export function NewChatModal({ onStartChat, isPending, isOpen, onClose }) {
         <div className="max-h-72 overflow-y-auto">
           {searchResults.length === 0 ? (
             <div className="py-8 text-center text-base-content/60 text-sm">
-              {searchQuery ? "No users found" : "Start typing to search"}
+              {isLoading
+                ? "Loading users..."
+                : searchQuery.trim()
+                  ? "No users found"
+                  : "No other users yet"}
             </div>
           ) : (
             <div className="space-y-2">
