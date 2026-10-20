@@ -132,7 +132,10 @@ const ChatDetailScreen = () => {
             <Text className="text-foreground font-semibold text-base" numberOfLines={1}>
               {name}
             </Text>
-            <Text className={`text-xs ${isTyping ? "text-primary" : "text-muted-foreground"}`}>
+            <Text
+              className="text-xs"
+              style={{ color: isTyping ? "#F4A261" : isOnline ? "#22C55E" : "#A0A0A5" }}
+            >
               {isTyping ? "typing..." : isOnline ? "Online" : "Offline"}
             </Text>
           </View>
@@ -176,7 +179,8 @@ const ChatDetailScreen = () => {
               }}
             >
               {messages.map((message) => {
-                const senderId = (message.sender as MessageSender)._id;
+                const senderId =
+                  typeof message.sender === "string" ? message.sender : message.sender._id;
                 const isFromMe = currentUser ? senderId === currentUser._id : false;
 
                 return <MessageBubble key={message._id} message={message} isFromMe={isFromMe} />;
