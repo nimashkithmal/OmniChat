@@ -69,7 +69,9 @@ const ProfileTab = () => {
 
           <View className="flex-row items-center mt-3 bg-green-500/20 px-3 py-1.5 rounded-full">
             <View className="w-2 h-2 bg-green-500 rounded-full mr-2" />
-            <Text className="text-green-500 text-sm font-medium">Online</Text>
+            <Text className="text-sm font-medium" style={{ color: "#22C55E" }}>
+              Online
+            </Text>
           </View>
         </View>
       </View>

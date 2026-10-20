@@ -8,8 +8,11 @@ export const useUsers = () => {
   return useQuery({
     queryKey: ["users"],
     queryFn: async () => {
-      const { data } = await apiWithAuth<User[]>({ method: "GET", url: "/users" });
-      return data;
+      const { data } = await apiWithAuth<User[] | { users?: User[] }>({
+        method: "GET",
+        url: "/users",
+      });
+      return Array.isArray(data) ? data : data.users ?? [];
     },
   });
 };

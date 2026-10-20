@@ -180,8 +180,10 @@ const ChatDetailScreen = () => {
             >
               {messages.map((message) => {
                 const senderId =
-                  typeof message.sender === "string" ? message.sender : message.sender._id;
-                const isFromMe = currentUser ? senderId === currentUser._id : false;
+                  typeof message.sender === "string"
+                    ? message.sender
+                    : String(message.sender._id);
+                const isFromMe = Boolean(currentUser && senderId === String(currentUser._id));
 
                 return <MessageBubble key={message._id} message={message} isFromMe={isFromMe} />;
               })}
