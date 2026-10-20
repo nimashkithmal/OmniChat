@@ -18,13 +18,13 @@ export async function getChats(req: AuthRequest, res: Response, next: NextFuncti
             const otherParticipant = chat.participants.find(p => p._id.toString() !== userId)
             return {
                 _id: chat._id,
-                participants: otherParticipant ?? null,
+                participant: otherParticipant ?? null,
                 lastMessage: chat.lastMessage,
                 lastMessageAt: chat.lastMessageAt,
                 createdAt: chat.createdAt,
             }
         })
-        res.json({ chats: formattedChats });    
+        res.json(formattedChats);
 
     } catch (error) {
         res.status(500);
@@ -87,7 +87,7 @@ export async function getOrCreateChat(req: AuthRequest, res: Response, next: Nex
 
         res.json({ 
             _id: chat._id,
-            participants: otherParticipant ?? null,
+            participant: otherParticipant ?? null,
             lastMessage: chat.lastMessage,
             lastMessageAt: chat.lastMessageAt,
             createdAt: chat.createdAt,
