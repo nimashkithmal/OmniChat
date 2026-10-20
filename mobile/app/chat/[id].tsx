@@ -123,7 +123,7 @@ const ChatDetailScreen = () => {
     <SafeAreaView className="flex-1 bg-surface" edges={["top", "bottom"]}>
       {/* Header */}
       <View className="flex-row items-center px-4 py-2 bg-surface border-b border-surface-light">
-        <Pressable onPress={() => router.back()}>
+        <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))}>
           <Ionicons name="arrow-back" size={24} color="#F4A261" />
         </Pressable>
         <View className="flex-row items-center flex-1 ml-2">
