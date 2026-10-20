@@ -1,103 +1,147 @@
-import {Socket, Server as SocketServer} from "socket.io";
-import {Server as httpServer} from "http";
-import { Message } from "../models/Message";
-import { User } from "../models/User";
+import { Socket, Server as SocketServer } from "socket.io";
+import { Server as HttpServer } from "http";
 import { verifyToken } from "@clerk/express";
-import {Chat} from "../models/Chat";
+import { Message } from "../models/Message";
+import { Chat } from "../models/Chat";
+import { User } from "../models/User";
 
-export const onlineUsers: Map<string, string> = new Map();
+export const onlineUsers: Map<string, Set<string>> = new Map();
 
-export const initializeSocket = (httpServer: httpServer) => {
-    const allowedOrigins = [
-        "http://localhost:8081",
-        "http://localhost:5173",
-        process.env.FRONTEND_URL,
-    ].filter(Boolean) as string[];
+export const initializeSocket = (httpServer: HttpServer) => {
+  const allowedOrigins = [
+    "http://localhost:8081", // Expo mobile
+    "http://localhost:5173", // Vite web dev
+    "https://omnichatnimash.duckdns.org",
+    process.env.FRONTEND_URL, // production
+  ].filter(Boolean) as string[];
 
+  const io = new SocketServer(httpServer, { cors: { origin: allowedOrigins } });
 
-    const io = new SocketServer(httpServer, { cors: { origin: allowedOrigins } });
+  // verify socket connection - if the user is authenticated, we will store the user id in the socket
 
-    io.use(async (socket, next) => {
-        const token = socket.handshake.auth.token;
-        if (!token) return next(new Error("Authentication error: No token provided"));
-        try {
-            const session = await verifyToken(token,{secretKey: process.env.CLERK_SECRET_KEY!});
+  io.use(async (socket, next) => {
+    const token = socket.handshake.auth.token; // this is what user will send from client
+    if (!token) return next(new Error("Authentication error"));
 
-            const ClerkId = session.sub
+    try {
+      const session = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY! });
 
-            const user = await User.findOne({ clerkId: ClerkId });
-            if (!user) return next(new Error("Authentication error: User not found"));
+      const clerkId = session.sub;
 
-            socket.data.userId = user._id.toString();
-            next();
-            
-        }catch (error: any) {
-            next(new Error(error));
-        
-        }    
+      const user = await User.findOne({ clerkId });
+      if (!user) return next(new Error("User not found"));
+
+      socket.data.userId = user._id.toString();
+
+      next();
+    } catch (error: any) {
+      next(new Error(error));
+    }
+  });
+
+  // this "connection" event name is special and should be written like this
+  // it's the event that is triggered when a new client connects to the server
+  io.on("connection", (socket) => {
+    const userId = socket.data.userId;
+    const userSockets = onlineUsers.get(userId) ?? new Set<string>();
+    const wasOnline = userSockets.size > 0;
+
+    userSockets.add(socket.id);
+    onlineUsers.set(userId, userSockets);
+
+    // send list of currently online users to the newly connected client
+    socket.emit("online-users", { userIds: Array.from(onlineUsers.keys()) });
+
+    if (!wasOnline) {
+      socket.broadcast.emit("user-online", { userId });
+    }
+
+    socket.join(`user:${userId}`);
+
+    socket.on("get-online-users", () => {
+      socket.emit("online-users", { userIds: Array.from(onlineUsers.keys()) });
     });
 
-    io.on("connection", (socket) => {
-        const userId = socket.data.userId;
+    socket.on("join-chat", (chatId: string) => {
+      socket.join(`chat:${chatId}`);
+    });
 
-        socket.emit("online-users",{userId:Array.from(onlineUsers.keys())})
+    socket.on("leave-chat", (chatId: string) => {
+      socket.leave(`chat:${chatId}`);
+    });
 
-        onlineUsers.set(userId, socket.id);
+    // handle sending messages
+    socket.on("send-message", async (data: { chatId: string; text: string }) => {
+      try {
+        const { chatId, text } = data;
 
-        socket.broadcast.emit("user-connected", { userId });
-
-        socket.join(`user-connected: ${userId}`);
-
-        socket.on("join-chat", (chatId: string) => {
-            socket.join(`chat:${chatId}`);
+        const chat = await Chat.findOne({
+          _id: chatId,
+          participants: userId,
         });
-        socket.on("leave-chat", (chatId: string) => {
-            socket.leave(`chat:${chatId}`);
+
+        if (!chat) {
+          socket.emit("socket-error", { message: "Chat not found" });
+          return;
+        }
+
+        const message = await Message.create({
+          chat: chatId,
+          sender: userId,
+          text,
         });
 
-        socket.on("send-message", async (data: { chatId: string; text: string }) => {
+        chat.lastMessage = message._id;
+        chat.lastMessageAt = new Date();
+        await chat.save();
 
-            try {
-                const {chatId, text} = data;
-                const chat = await Chat.findOne({
-                    _id: chatId,
-                    participants: userId,
-                });
-                if (!chat) {
-                    socket.emit("error", { message: "Chat not found or you are not a participant" });
-                    return;
-                }
-                const message = await Message.create({
-                    chat: chatId,
-                    sender: userId,
-                    text,
-                });
-                chat.lastMessage = message._id;
-                chat.lastMessageAt = new Date();
-                await chat.save();
+        await message.populate("sender", "name avatar");
 
-                await message.populate("sender", "name avatar");
+        // emit to chat room (for users inside the chat)
+        io.to(`chat:${chatId}`).emit("new-message", message);
 
-                io.to(`chat:${chatId}`).emit("new-message", message);
+        // also emit to participants' personal rooms (for chat list view)
+        for (const participantId of chat.participants) {
+          io.to(`user:${participantId}`).emit("new-message", message);
+        }
+      } catch (error) {
+        socket.emit("socket-error", { message: "Failed to send message" });
+      }
+    });
 
-                for(const participantId of chat.participants) {
-                    io.to(`user-connected: ${participantId}`).emit("new-message-notification", message);
-                }
-            }catch (error) {
-                socket.emit("error", { message: "Failed to send message" });
+    socket.on("typing", async (data: { chatId: string; isTyping: boolean }) => {
+      const typingPayload = {
+        userId,
+        chatId: data.chatId,
+        isTyping: data.isTyping,
+      };
 
-            }    
-    }); 
+      // emit to chat room (for users inside the chat)
+      socket.to(`chat:${data.chatId}`).emit("typing", typingPayload);
 
-    socket.on("typing", async(data) => {});
+      // also emit to other participant's personal room (for chat list view)
+      try {
+        const chat = await Chat.findById(data.chatId);
+        if (chat) {
+          const otherParticipantId = chat.participants.find((p: any) => p.toString() !== userId);
+          if (otherParticipantId) {
+            socket.to(`user:${otherParticipantId}`).emit("typing", typingPayload);
+          }
+        }
+      } catch (error) {
+        // silently fail - typing indicator is not critical
+      }
+    });
 
-    socket.on("disconnect", async() => {
+    socket.on("disconnect", () => {
+      const userSockets = onlineUsers.get(userId);
+      userSockets?.delete(socket.id);
+
+      if (userSockets?.size === 0) {
         onlineUsers.delete(userId);
-
-        socket.broadcast.emit("user-disconnected", { userId });
+        socket.broadcast.emit("user-offline", { userId });
+      }
     });
-
-    
   });
 
   return io;

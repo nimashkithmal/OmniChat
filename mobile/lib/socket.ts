@@ -96,7 +96,9 @@ export const useSocketStore = create<SocketState>((set, get) => ({
 
       // Update chat's lastMessage directly for instant UI update
       queryClient.setQueryData<Chat[]>(["chats"], (oldChats) => {
-        return oldChats?.map((chat) => {
+        if (!Array.isArray(oldChats)) return oldChats;
+
+        return oldChats.map((chat) => {
           if (chat._id === message.chat) {
             return {
               ...chat,
@@ -116,7 +118,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       // mark as unread if not currently viewing this chat and message is from other user
       if (currentChatId !== message.chat) {
         const chats = queryClient.getQueryData<Chat[]>(["chats"]);
-        const chat = chats?.find((c) => c._id === message.chat);
+        const chat = Array.isArray(chats) ? chats.find((c) => c._id === message.chat) : undefined;
         if (chat?.participant && senderId === chat.participant._id) {
           set((state) => ({
             unreadChats: new Set([...state.unreadChats, message.chat]),
