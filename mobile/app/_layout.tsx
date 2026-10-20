@@ -5,11 +5,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { tokenCache } from "@clerk/clerk-expo/token-cache";
 import AuthSync from "@/components/AuthSync";
 import { StatusBar } from "expo-status-bar";
+import { Platform } from "react-native";
 import * as Sentry from "@sentry/react-native";
 import SocketConnection from "@/components/SocketConnection";
 
 Sentry.init({
   dsn: "https://6c998e045dea34a424b5cdc8b375e6b4@o4509813037137920.ingest.de.sentry.io/4510696586477648",
+  enabled: Platform.OS !== "web",
 
   // Adds more context data to events (IP address, cookies, user, etc.)
   // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/

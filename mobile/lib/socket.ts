@@ -4,7 +4,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { Chat, Message, MessageSender } from "@/types";
 import * as Sentry from "@sentry/react-native";
 
-const SOCKET_URL = "https://omnichatnimash.duckdns.org";
+const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL ?? "https://omnichatnimash.duckdns.org";
 
 interface SocketState {
   socket: Socket | null;
@@ -40,20 +40,33 @@ export const useSocketStore = create<SocketState>((set, get) => ({
 
     const socket = io(SOCKET_URL, {
       auth: { token },
-      transports: ["polling"],
+      transports: ["websocket", "polling"],
     });
 
     socket.on("connect", () => {
       console.log("Socket connected, id:", socket.id);
       Sentry.logger.info("Socket connected", { socketId: socket.id });
       set({ isConnected: true });
+      socket.emit("get-online-users");
     });
+
+    const presenceInterval = setInterval(() => {
+      if (socket.connected) socket.emit("get-online-users");
+    }, 10_000);
 
     socket.on("disconnect", () => {
       console.log("Socket disconnect", socket.id);
       Sentry.logger.info("Socket disconnect", { socketId: socket.id });
       set({ isConnected: false });
     });
+
+    socket.on("connect_error", (error) => {
+      console.error("Socket connection failed:", error.message);
+      Sentry.logger.error("Socket connection failed", { message: error.message });
+      set({ isConnected: false });
+    });
+
+    socket.on("disconnect", () => clearInterval(presenceInterval));
 
     socket.on("online-users", ({ userIds }: { userIds: string[] }) => {
       console.log("Received online-users:", userIds);
