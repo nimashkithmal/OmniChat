@@ -47,16 +47,11 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       console.log("Socket connected, id:", socket.id);
       Sentry.logger.info("Socket connected", { socketId: socket.id });
       set({ isConnected: true });
-      socket.emit("get-online-users");
     });
 
-    const presenceInterval = setInterval(() => {
-      if (socket.connected) socket.emit("get-online-users");
-    }, 10_000);
-
-    socket.on("disconnect", () => {
-      console.log("Socket disconnect", socket.id);
-      Sentry.logger.info("Socket disconnect", { socketId: socket.id });
+    socket.on("disconnect", (reason) => {
+      console.log("Socket disconnected:", reason);
+      Sentry.logger.info("Socket disconnected", { reason });
       set({ isConnected: false });
     });
 
@@ -66,10 +61,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       set({ isConnected: false });
     });
 
-    socket.on("disconnect", () => clearInterval(presenceInterval));
-
     socket.on("online-users", ({ userIds }: { userIds: string[] }) => {
-      console.log("Received online-users:", userIds);
       set({ onlineUsers: new Set(userIds) });
     });
 

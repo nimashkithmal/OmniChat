@@ -2,11 +2,12 @@ import { useAuthCallback } from "@/hooks/useAuth";
 import { useEffect, useRef } from "react";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import * as Sentry from "@sentry/react-native";
+import SocketConnection from "@/components/SocketConnection";
 
 const AuthSync = () => {
   const { isSignedIn } = useAuth();
   const { user } = useUser();
-  const { mutate: syncUser } = useAuthCallback();
+  const { mutate: syncUser, isSuccess, reset } = useAuthCallback();
   const hasSynced = useRef(false); // this is used to not run useEffect more than once
 
   useEffect(() => {
@@ -33,10 +34,11 @@ const AuthSync = () => {
 
     if (!isSignedIn) {
       hasSynced.current = false;
+      reset();
     }
-  }, [isSignedIn, user, syncUser]);
+  }, [isSignedIn, user, syncUser, reset]);
 
-  return null;
+  return isSignedIn && isSuccess ? <SocketConnection /> : null;
 };
 
 export default AuthSync;

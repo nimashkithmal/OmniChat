@@ -4,10 +4,12 @@ import { useChats } from "@/hooks/useChats";
 import { Chat } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Platform, Pressable, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const ChatsTab = () => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { data: chats, isLoading, error, refetch } = useChats();
 
   if (isLoading) {
@@ -44,7 +46,10 @@ const ChatsTab = () => {
   };
 
   return (
-    <View className="flex-1 bg-surface">
+    <View
+      className="flex-1 bg-surface"
+      style={{ paddingTop: Platform.OS === "android" ? insets.top : 0 }}
+    >
       <FlatList
         data={chats}
         keyExtractor={(item) => item._id}
